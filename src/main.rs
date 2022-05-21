@@ -32,6 +32,10 @@ impl TryFrom<u32> for Input {
 
 #[derive(Component)]
 struct MoveCamera;
+const SLOT_SIZE: f32 = 100.0;
+const GRID_SIZE: u32 = 3; 
+
+const MAX_CAM: f32 = SLOT_SIZE * (GRID_SIZE / 2) as f32;
 
 fn move_camera(
     mut key_evr: EventReader<KeyboardInput>,
@@ -43,10 +47,10 @@ fn move_camera(
             let mut y = transform.translation.y;
             match (ev.state, Input::try_from(ev.scan_code)) {
                 (ElementState::Pressed, Ok(i)) => match i {
-                    Input::Up => y = f32::min(100.0, y + 100.0),
-                    Input::Down => y = f32::max(-100.0, y - 100.0),
-                    Input::Left => x = f32::max(-100.0, x - 100.0),
-                    Input::Right => x = f32::min(100.0, x + 100.0),
+                    Input::Up => y = f32::min(MAX_CAM, y + SLOT_SIZE),
+                    Input::Down => y = f32::max(-MAX_CAM, y - SLOT_SIZE),
+                    Input::Left => x = f32::max(-MAX_CAM, x - SLOT_SIZE),
+                    Input::Right => x = f32::min(MAX_CAM, x + SLOT_SIZE),
                     _ => {}
                 },
                 _ => {}
@@ -57,19 +61,35 @@ fn move_camera(
     }
 }
 
+const BAR_THICKNESS: f32 = 10.0;
+const BAR_LENGTH: f32 = GRID_SIZE as f32 * SLOT_SIZE;
+const BAR_POS: f32 = SLOT_SIZE / 2.0;
+
 fn setup(mut commands: Commands) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 
-    commands
-        .spawn_bundle(SpriteBundle {
-            sprite: Sprite {
-                color: Color::rgb(0.25, 0.25, 0.75),
-                custom_size: Some(Vec2::new(50.0, 50.0)),
+    const POSITIONS: [((f32, f32), (f32, f32)); 4] = [
+        ((BAR_POS, 0.0), (BAR_THICKNESS, BAR_LENGTH)),
+        ((-BAR_POS, 0.0), (BAR_THICKNESS, BAR_LENGTH)),
+        ((0.0, BAR_POS), (BAR_LENGTH, BAR_THICKNESS)),
+        ((0.0, -BAR_POS), (BAR_LENGTH, BAR_THICKNESS)),
+    ];
+    for ((tx, ty), (sx, sy)) in POSITIONS {
+        commands
+            .spawn_bundle(SpriteBundle {
+                transform: Transform {
+                    translation: Vec2::new(tx, ty).extend(0.0),
+                    scale: Vec2::new(sx, sy).extend(0.0),
+                    ..default()
+                },
+                sprite: Sprite {
+                    color: Color::BLACK,
+                    ..default()
+                },
                 ..default()
-            },
-            ..default()
-        })
-        .insert(MoveCamera);
+            })
+            .insert(MoveCamera);
+    }
 }
 
 fn main() {
